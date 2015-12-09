@@ -61,11 +61,11 @@ public abstract class HBaseUtil {
             logger.info("Logged into Hbase with User: " + UserGroupInformation.getLoginUser());
         }
 
-        if(null != hbaseConfig.getHbaseZookeeperQuorum()){
+        if (null != hbaseConfig.getHbaseZookeeperQuorum()) {
             configuration.set("hbase.zookeeper.quorum", hbaseConfig.getHbaseZookeeperQuorum());
         }
 
-        if(null != hbaseConfig.getHbaseZookeeperClientPort()){
+        if (null != hbaseConfig.getHbaseZookeeperClientPort()) {
             configuration.setInt("hbase.zookeeper.property.clientPort", hbaseConfig.getHbaseZookeeperClientPort());
         }
         return configuration;

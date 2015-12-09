@@ -6,7 +6,7 @@
  * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,10 +21,10 @@ import com.flipkart.foxtrot.core.MockElasticsearchServer;
 import com.flipkart.foxtrot.core.TestUtils;
 import com.flipkart.foxtrot.core.common.CacheUtils;
 import com.flipkart.foxtrot.core.datastore.DataStore;
-import com.flipkart.foxtrot.core.querystore.QueryStore;
+import com.flipkart.foxtrot.core.manager.impl.ElasticsearchIndexStoreManager;
 import com.flipkart.foxtrot.core.querystore.impl.DistributedCacheFactory;
+import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchConfig;
 import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchConnection;
-import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchUtils;
 import com.flipkart.foxtrot.core.querystore.impl.HazelcastConnection;
 import com.flipkart.foxtrot.core.table.TableManager;
 import com.flipkart.foxtrot.core.table.TableManagerException;
@@ -65,7 +65,6 @@ public class TableManagerResourceTest extends ResourceTest {
 
     public TableManagerResourceTest() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
-        ElasticsearchUtils.setMapper(mapper);
 
         //Initializing Cache Factory
         hazelcastInstance = new TestHazelcastInstanceFactory(1).newHazelcastInstance();
@@ -74,23 +73,29 @@ public class TableManagerResourceTest extends ResourceTest {
         CacheUtils.setCacheFactory(new DistributedCacheFactory(hazelcastConnection, mapper));
         Config config = new Config();
         when(hazelcastConnection.getHazelcastConfig()).thenReturn(config);
+
+        // Mock elasticsearch connection
         elasticsearchServer = new MockElasticsearchServer(UUID.randomUUID().toString());
         ElasticsearchConnection elasticsearchConnection = Mockito.mock(ElasticsearchConnection.class);
         when(elasticsearchConnection.getClient()).thenReturn(elasticsearchServer.getClient());
-        ElasticsearchUtils.initializeMappings(elasticsearchServer.getClient());
+
+        // Initialize table metadata manager
+        TableMetadataManager tableMetadataManager = new DistributedTableMetadataManager(hazelcastConnection, elasticsearchConnection);
+        tableMetadataManager = spy(tableMetadataManager);
+        tableMetadataManager.start();
+
+        ElasticsearchIndexStoreManager indexStoreManager = new ElasticsearchIndexStoreManager(
+                elasticsearchConnection, new ElasticsearchConfig(), tableMetadataManager
+        );
+        indexStoreManager.initializeFoxtrot();
 
         Settings indexSettings = ImmutableSettings.settingsBuilder().put("number_of_replicas", 0).build();
         CreateIndexRequest createRequest = new CreateIndexRequest(TableMapStore.TABLE_META_INDEX).settings(indexSettings);
         elasticsearchServer.getClient().admin().indices().create(createRequest).actionGet();
         elasticsearchServer.getClient().admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
 
-        TableMetadataManager tableMetadataManager = new DistributedTableMetadataManager(hazelcastConnection, elasticsearchConnection);
-        tableMetadataManager = spy(tableMetadataManager);
-        tableMetadataManager.start();
-
-        QueryStore queryStore = Mockito.mock(QueryStore.class);
         DataStore dataStore = Mockito.mock(DataStore.class);
-        this.tableManager = new FoxtrotTableManager(tableMetadataManager, queryStore, dataStore);
+        this.tableManager = new FoxtrotTableManager(tableMetadataManager, indexStoreManager, dataStore);
         this.tableManager = spy(tableManager);
     }
 

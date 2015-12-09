@@ -1,6 +1,6 @@
 package com.flipkart.foxtrot.core.common;
 
-import com.flipkart.foxtrot.core.querystore.QueryStore;
+import com.flipkart.foxtrot.core.manager.IndexStoreManager;
 import com.yammer.dropwizard.lifecycle.Managed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,11 +14,11 @@ public class DataDeletionManager implements Managed {
     private static final Logger logger = LoggerFactory.getLogger(DataDeletionManager.class.getSimpleName());
     final DataDeletionManagerConfig config;
     final Timer timer;
-    final QueryStore queryStore;
+    final IndexStoreManager indexStoreManager;
 
-    public DataDeletionManager(DataDeletionManagerConfig deletionManagerConfig, QueryStore queryStore) {
+    public DataDeletionManager(DataDeletionManagerConfig deletionManagerConfig, IndexStoreManager indexStoreManager) {
         this.config = deletionManagerConfig;
-        this.queryStore = queryStore;
+        this.indexStoreManager = indexStoreManager;
         this.timer = new Timer(true);
     }
 
@@ -27,7 +27,7 @@ public class DataDeletionManager implements Managed {
         logger.info("Starting Deletion Manager");
         if (config.isActive()) {
             logger.info("Scheduling data deletion Job");
-            this.timer.scheduleAtFixedRate(new DataDeletionTask(queryStore),
+            this.timer.scheduleAtFixedRate(new DataDeletionTask(indexStoreManager),
                     config.getInitialDelay() * 1000L,
                     config.getInterval() * 1000L);
             logger.info("Scheduled data deletion Job");

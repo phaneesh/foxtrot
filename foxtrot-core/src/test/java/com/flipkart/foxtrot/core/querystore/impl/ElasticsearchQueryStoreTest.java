@@ -24,11 +24,10 @@ import com.flipkart.foxtrot.common.TableFieldMapping;
 import com.flipkart.foxtrot.core.MockElasticsearchServer;
 import com.flipkart.foxtrot.core.TestUtils;
 import com.flipkart.foxtrot.core.datastore.DataStore;
+import com.flipkart.foxtrot.core.manager.impl.ElasticsearchIndexStoreManager;
 import com.flipkart.foxtrot.core.querystore.DocumentTranslator;
-import com.flipkart.foxtrot.core.querystore.QueryExecutor;
 import com.flipkart.foxtrot.core.querystore.QueryStoreException;
 import com.flipkart.foxtrot.core.table.TableMetadataManager;
-import com.flipkart.foxtrot.core.querystore.actions.spi.AnalyticsLoader;
 import com.google.common.collect.ImmutableList;
 import com.shash.hbase.ds.RowKeyDistributorByHashPrefix;
 import org.elasticsearch.action.get.GetResponse;
@@ -38,8 +37,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.anyString;
@@ -50,35 +47,37 @@ import static org.mockito.Mockito.when;
  */
 public class ElasticsearchQueryStoreTest {
     private MockElasticsearchServer elasticsearchServer;
-    private DataStore dataStore;
     private ElasticsearchQueryStore queryStore;
-    private ObjectMapper mapper;
+    private ObjectMapper mapper = new ObjectMapper();
+    private ElasticsearchIndexStoreManager indexStoreManager;
     private TableMetadataManager tableMetadataManager;
     private final DocumentTranslator translator = new DocumentTranslator(new RowKeyDistributorByHashPrefix(
             new RowKeyDistributorByHashPrefix.OneByteSimpleHash(32)));
 
     @Before
     public void setUp() throws Exception {
-        mapper = new ObjectMapper();
-        ElasticsearchUtils.setMapper(mapper);
-        dataStore = TestUtils.getDataStore();
+        DataStore dataStore = TestUtils.getDataStore();
 
+        // Mock elasticsearch connection
         elasticsearchServer = new MockElasticsearchServer(UUID.randomUUID().toString());
         ElasticsearchConnection elasticsearchConnection = Mockito.mock(ElasticsearchConnection.class);
         when(elasticsearchConnection.getClient()).thenReturn(elasticsearchServer.getClient());
-        ElasticsearchUtils.initializeMappings(elasticsearchConnection.getClient());
-        tableMetadataManager = Mockito.mock(TableMetadataManager.class);
+
+        // Ensure that table exists before saving/reading data from it
+        this.tableMetadataManager = Mockito.mock(TableMetadataManager.class);
         when(tableMetadataManager.exists(TestUtils.TEST_TABLE_NAME)).thenReturn(true);
         when(tableMetadataManager.get(anyString())).thenReturn(TestUtils.TEST_TABLE);
-        AnalyticsLoader analyticsLoader = new AnalyticsLoader(tableMetadataManager, dataStore, queryStore, elasticsearchConnection);
-        ExecutorService executorService = Executors.newFixedThreadPool(1);
-        QueryExecutor queryExecutor = new QueryExecutor(analyticsLoader, executorService);
-        queryStore = new ElasticsearchQueryStore(tableMetadataManager, elasticsearchConnection, dataStore);
+        this.indexStoreManager = new ElasticsearchIndexStoreManager(
+                elasticsearchConnection, new ElasticsearchConfig(), tableMetadataManager
+        );
+        indexStoreManager.initializeFoxtrot();
+        queryStore = new ElasticsearchQueryStore(tableMetadataManager, indexStoreManager, elasticsearchConnection, dataStore, mapper);
     }
 
     @After
     public void tearDown() throws Exception {
         elasticsearchServer.shutdown();
+        tableMetadataManager.stop();
     }
 
     @Test
@@ -89,16 +88,16 @@ public class ElasticsearchQueryStoreTest {
         JsonNode data = mapper.valueToTree(Collections.singletonMap("TEST_NAME", "SINGLE_SAVE_TEST"));
         originalDocument.setData(data);
         queryStore.save(TestUtils.TEST_TABLE_NAME, originalDocument);
-        final Document translatedDocuemnt = translator.translate(tableMetadataManager.get(TestUtils.TEST_TABLE_NAME), originalDocument);
+        final Document translatedDocument = translator.translate(tableMetadataManager.get(TestUtils.TEST_TABLE_NAME), originalDocument);
         GetResponse getResponse = elasticsearchServer
-                        .getClient()
-                        .prepareGet(ElasticsearchUtils.getCurrentIndex(TestUtils.TEST_TABLE_NAME, originalDocument.getTimestamp()),
-                                ElasticsearchUtils.DOCUMENT_TYPE_NAME,
-                                translatedDocuemnt.getId())
-                        .setFields("_timestamp").execute().actionGet();
+                .getClient()
+                .prepareGet(indexStoreManager.getIndexNameForTimestamp(TestUtils.TEST_TABLE_NAME, originalDocument.getTimestamp()),
+                        indexStoreManager.DOCUMENT_TYPE_NAME,
+                        translatedDocument.getId())
+                .setFields("_timestamp").execute().actionGet();
         assertTrue("Id should exist in ES", getResponse.isExists());
-        assertEquals("Id should match requestId", translatedDocuemnt.getId(), getResponse.getId());
-        assertEquals("Timestamp should match request timestamp", translatedDocuemnt.getTimestamp(), getResponse.getField("_timestamp").getValue());
+        assertEquals("Id should match requestId", translatedDocument.getId(), getResponse.getId());
+        assertEquals("Timestamp should match request timestamp", translatedDocument.getTimestamp(), getResponse.getField("_timestamp").getValue());
     }
 
     @Test
@@ -125,12 +124,12 @@ public class ElasticsearchQueryStoreTest {
                     mapper.valueToTree(Collections.singletonMap("TEST_NAME", "SINGLE_SAVE_TEST"))));
         }
         queryStore.save(TestUtils.TEST_TABLE_NAME, documents);
-        final List<Document> translatedDocuemtns = translator.translate(tableMetadataManager.get(TestUtils.TEST_TABLE_NAME), documents);
-        for (Document document : translatedDocuemtns) {
+        final List<Document> translatedDocuments = translator.translate(tableMetadataManager.get(TestUtils.TEST_TABLE_NAME), documents);
+        for (Document document : translatedDocuments) {
             GetResponse getResponse = elasticsearchServer
                     .getClient()
-                    .prepareGet(ElasticsearchUtils.getCurrentIndex(TestUtils.TEST_TABLE_NAME, document.getTimestamp()),
-                            ElasticsearchUtils.DOCUMENT_TYPE_NAME,
+                    .prepareGet(indexStoreManager.getIndexNameForTimestamp(TestUtils.TEST_TABLE_NAME, document.getTimestamp()),
+                            indexStoreManager.DOCUMENT_TYPE_NAME,
                             document.getId())
                     .setFields("_timestamp").execute().actionGet();
             assertTrue("Id should exist in ES", getResponse.isExists());
@@ -185,7 +184,7 @@ public class ElasticsearchQueryStoreTest {
         Document document = new Document(id, System.currentTimeMillis(), data);
         document.setTimestamp(timestamp);
         queryStore.save(TestUtils.TEST_TABLE_NAME, document);
-        elasticsearchServer.refresh(ElasticsearchUtils.getIndices(TestUtils.TEST_TABLE_NAME));
+        elasticsearchServer.refresh(indexStoreManager.getIndices(TestUtils.TEST_TABLE_NAME));
         Document responseDocument = queryStore.get(TestUtils.TEST_TABLE_NAME, id);
         assertNotNull(responseDocument);
         assertEquals(id, responseDocument.getId());
@@ -215,7 +214,7 @@ public class ElasticsearchQueryStoreTest {
             idValues.get(id).setTimestamp(System.currentTimeMillis());
         }
         queryStore.save(TestUtils.TEST_TABLE_NAME, ImmutableList.copyOf(idValues.values()));
-        elasticsearchServer.refresh(ElasticsearchUtils.getIndices(TestUtils.TEST_TABLE_NAME));
+        elasticsearchServer.refresh(indexStoreManager.getIndices(TestUtils.TEST_TABLE_NAME));
         List<Document> responseDocuments = queryStore.getAll(TestUtils.TEST_TABLE_NAME, ids);
         HashMap<String, Document> responseIdValues = new HashMap<String, Document>();
         for (Document doc : responseDocuments) {

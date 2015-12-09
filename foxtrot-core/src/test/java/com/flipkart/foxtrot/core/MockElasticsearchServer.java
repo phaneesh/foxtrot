@@ -1,12 +1,12 @@
 /**
  * Copyright 2014 Flipkart Internet Pvt. Ltd.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,7 @@ package com.flipkart.foxtrot.core;
 import org.apache.commons.io.FileUtils;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
+import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.node.Node;
@@ -34,16 +35,16 @@ import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 
 public class MockElasticsearchServer {
     private final Node node;
-    private String DATA_DIRECTORY = UUID.randomUUID().toString() + "/elasticsearch-data";
+    private String dataDirectory;
 
     public MockElasticsearchServer(String directory) {
-        this.DATA_DIRECTORY = UUID.randomUUID().toString() + "/" + directory;
+        this.dataDirectory = String.format("target/%s", UUID.randomUUID().toString());
         ImmutableSettings.Builder elasticsearchSettings = ImmutableSettings.settingsBuilder()
                 .put("http.enabled", "false")
-                .put("path.data", "target/" + DATA_DIRECTORY);
-
+                .put("path.data", dataDirectory);
         node = nodeBuilder()
                 .local(true)
+                .clusterName(UUID.randomUUID().toString())
                 .settings(elasticsearchSettings.build())
                 .node();
     }
@@ -57,13 +58,21 @@ public class MockElasticsearchServer {
     }
 
     public void shutdown() throws IOException {
-        node.client().admin().indices().delete(new DeleteIndexRequest("table-meta"));
+        node.client().admin().indices().delete(new DeleteIndexRequest("table-meta")
+                .indicesOptions(IndicesOptions.fromOptions(true, true, true, true))).actionGet();
         node.close();
+        while (!node.isClosed()) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
         deleteDataDirectory();
     }
 
     private void deleteDataDirectory() throws IOException {
-        System.out.println("Deleting DATA DIRECTORY");
-        FileUtils.deleteDirectory(new File(DATA_DIRECTORY));
+        System.out.println("Deleting DATA DIRECTORY " + dataDirectory);
+        FileUtils.deleteDirectory(new File(dataDirectory));
     }
 }

@@ -23,17 +23,15 @@ import com.flipkart.foxtrot.common.query.FilterCombinerType;
 import com.flipkart.foxtrot.common.query.datetime.LastFilter;
 import com.flipkart.foxtrot.common.query.general.AnyFilter;
 import com.flipkart.foxtrot.core.common.Action;
-import com.flipkart.foxtrot.core.datastore.DataStore;
+import com.flipkart.foxtrot.core.manager.impl.ElasticsearchIndexStoreManager;
 import com.flipkart.foxtrot.core.querystore.QueryStore;
 import com.flipkart.foxtrot.core.querystore.QueryStoreException;
-import com.flipkart.foxtrot.core.table.TableMetadataManager;
 import com.flipkart.foxtrot.core.querystore.actions.spi.AnalyticsProvider;
 import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchConnection;
-import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchUtils;
 import com.flipkart.foxtrot.core.querystore.query.ElasticSearchQueryGenerator;
+import com.flipkart.foxtrot.core.table.TableMetadataManager;
 import com.google.common.collect.Lists;
 import com.yammer.dropwizard.util.Duration;
-
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
@@ -59,11 +57,11 @@ public class HistogramAction extends Action<HistogramRequest> {
 
     public HistogramAction(HistogramRequest parameter,
                            TableMetadataManager tableMetadataManager,
-                           DataStore dataStore,
                            QueryStore queryStore,
+                           ElasticsearchIndexStoreManager indexStoreManager,
                            ElasticsearchConnection connection,
                            String cacheToken) {
-        super(parameter, tableMetadataManager, dataStore, queryStore, connection, cacheToken);
+        super(parameter, tableMetadataManager, queryStore, indexStoreManager, connection, cacheToken);
     }
 
     @Override
@@ -82,7 +80,7 @@ public class HistogramAction extends Action<HistogramRequest> {
 
     @Override
     public ActionResponse execute(HistogramRequest parameter) throws QueryStoreException {
-        parameter.setTable(ElasticsearchUtils.getValidTableName(parameter.getTable()));
+        parameter.setTable(getIndexStoreManager().getValidTableName(parameter.getTable()));
         if (null == parameter.getFilters()) {
             parameter.setFilters(Lists.<Filter>newArrayList(new AnyFilter(parameter.getTable())));
         }
@@ -114,8 +112,8 @@ public class HistogramAction extends Action<HistogramRequest> {
 
             String dateHistogramKey = Utils.sanitizeFieldForAggregation(parameter.getField());
             SearchResponse response = getConnection().getClient().prepareSearch(
-                    ElasticsearchUtils.getIndices(parameter.getTable(), parameter))
-                    .setTypes(ElasticsearchUtils.DOCUMENT_TYPE_NAME)
+                    getIndexStoreManager().getIndices(parameter.getTable(), parameter))
+                    .setTypes(getIndexStoreManager().DOCUMENT_TYPE_NAME)
                     .setIndicesOptions(Utils.indicesOptions())
                     .setQuery(new ElasticSearchQueryGenerator(FilterCombinerType.and)
                             .genFilter(parameter.getFilters()))

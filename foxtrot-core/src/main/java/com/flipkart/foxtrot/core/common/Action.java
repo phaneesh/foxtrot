@@ -19,7 +19,7 @@ import com.flipkart.foxtrot.common.ActionRequest;
 import com.flipkart.foxtrot.common.ActionResponse;
 import com.flipkart.foxtrot.common.query.Filter;
 import com.flipkart.foxtrot.common.query.numeric.LessThanFilter;
-import com.flipkart.foxtrot.core.datastore.DataStore;
+import com.flipkart.foxtrot.core.manager.impl.ElasticsearchIndexStoreManager;
 import com.flipkart.foxtrot.core.querystore.QueryStore;
 import com.flipkart.foxtrot.core.querystore.QueryStoreException;
 import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchConnection;
@@ -41,27 +41,27 @@ public abstract class Action<ParameterType extends ActionRequest> implements Cal
     private static final Logger logger = LoggerFactory.getLogger(Action.class.getSimpleName());
 
     private ParameterType parameter;
-    private DataStore dataStore;
     private ElasticsearchConnection connection;
     private final TableMetadataManager tableMetadataManager;
     private final QueryStore queryStore;
+    private final ElasticsearchIndexStoreManager indexStoreManager;
     private final String cacheToken;
     private final Cache cache;
     private String cacheKey = null;
 
     protected Action(ParameterType parameter,
                      TableMetadataManager tableMetadataManager,
-                     DataStore dataStore,
                      QueryStore queryStore,
+                     ElasticsearchIndexStoreManager indexStoreManager,
                      ElasticsearchConnection connection,
                      String cacheToken) {
         this.parameter = parameter;
         this.tableMetadataManager = tableMetadataManager;
         this.queryStore = queryStore;
+        this.indexStoreManager = indexStoreManager;
         this.cacheToken = cacheToken;
         this.cache = CacheUtils.getCacheFor(this.cacheToken);
         this.connection = connection;
-        this.dataStore = dataStore;
     }
 
     public String cacheKey() {
@@ -113,14 +113,6 @@ public abstract class Action<ParameterType extends ActionRequest> implements Cal
 
     abstract public ActionResponse execute(ParameterType parameter) throws QueryStoreException;
 
-    public DataStore getDataStore() {
-        return dataStore;
-    }
-
-    public void setDataStore(DataStore dataStore) {
-        this.dataStore = dataStore;
-    }
-
     public ElasticsearchConnection getConnection() {
         return connection;
     }
@@ -135,6 +127,10 @@ public abstract class Action<ParameterType extends ActionRequest> implements Cal
 
     public QueryStore getQueryStore() {
         return queryStore;
+    }
+
+    public ElasticsearchIndexStoreManager getIndexStoreManager() {
+        return indexStoreManager;
     }
 
     protected Filter getDefaultTimeSpan() {

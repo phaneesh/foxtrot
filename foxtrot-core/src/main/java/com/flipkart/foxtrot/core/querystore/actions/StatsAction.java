@@ -7,16 +7,14 @@ import com.flipkart.foxtrot.common.stats.StatsRequest;
 import com.flipkart.foxtrot.common.stats.StatsResponse;
 import com.flipkart.foxtrot.common.stats.StatsValue;
 import com.flipkart.foxtrot.core.common.Action;
-import com.flipkart.foxtrot.core.datastore.DataStore;
+import com.flipkart.foxtrot.core.manager.impl.ElasticsearchIndexStoreManager;
 import com.flipkart.foxtrot.core.querystore.QueryStore;
 import com.flipkart.foxtrot.core.querystore.QueryStoreException;
-import com.flipkart.foxtrot.core.table.TableMetadataManager;
 import com.flipkart.foxtrot.core.querystore.actions.spi.AnalyticsProvider;
 import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchConnection;
-import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchUtils;
 import com.flipkart.foxtrot.core.querystore.query.ElasticSearchQueryGenerator;
+import com.flipkart.foxtrot.core.table.TableMetadataManager;
 import com.google.common.collect.Lists;
-
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.search.aggregations.Aggregations;
@@ -40,11 +38,11 @@ public class StatsAction extends Action<StatsRequest> {
 
     public StatsAction(StatsRequest parameter,
                        TableMetadataManager tableMetadataManager,
-                       DataStore dataStore,
                        QueryStore queryStore,
+                       ElasticsearchIndexStoreManager indexStoreManager,
                        ElasticsearchConnection connection,
                        String cacheToken) {
-        super(parameter, tableMetadataManager, dataStore, queryStore, connection, cacheToken);
+        super(parameter, tableMetadataManager, queryStore, indexStoreManager, connection, cacheToken);
     }
 
     @Override
@@ -62,7 +60,7 @@ public class StatsAction extends Action<StatsRequest> {
 
     @Override
     public ActionResponse execute(StatsRequest request) throws QueryStoreException {
-        request.setTable(ElasticsearchUtils.getValidTableName(request.getTable()));
+        request.setTable(getIndexStoreManager().getValidTableName(request.getTable()));
         if (null == request.getFilters()) {
             request.setFilters(Lists.<Filter>newArrayList(new AnyFilter(request.getTable())));
         }
@@ -72,8 +70,8 @@ public class StatsAction extends Action<StatsRequest> {
 
         try {
             SearchResponse response = getConnection().getClient().prepareSearch(
-                    ElasticsearchUtils.getIndices(request.getTable(), request))
-                    .setTypes(ElasticsearchUtils.DOCUMENT_TYPE_NAME)
+                    getIndexStoreManager().getIndices(request.getTable(), request))
+                    .setTypes(getIndexStoreManager().DOCUMENT_TYPE_NAME)
                     .setIndicesOptions(Utils.indicesOptions())
                     .setQuery(new ElasticSearchQueryGenerator(request.getCombiner()).genFilter(request.getFilters()))
                     .setSize(0)

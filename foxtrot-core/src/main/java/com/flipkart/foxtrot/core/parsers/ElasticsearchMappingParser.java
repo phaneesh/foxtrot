@@ -1,12 +1,12 @@
 /**
  * Copyright 2014 Flipkart Internet Pvt. Ltd.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +19,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.foxtrot.common.FieldType;
 import com.flipkart.foxtrot.common.FieldTypeMapping;
-import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchUtils;
+import com.flipkart.foxtrot.core.manager.impl.ElasticsearchIndexStoreManager;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 
 import java.io.IOException;
@@ -33,9 +33,11 @@ import java.util.Set;
  */
 public class ElasticsearchMappingParser {
 
-    private ObjectMapper mapper;
+    private final ElasticsearchIndexStoreManager indexStoreManager;
+    private final ObjectMapper mapper;
 
-    public ElasticsearchMappingParser(ObjectMapper mapper) {
+    public ElasticsearchMappingParser(ElasticsearchIndexStoreManager indexStoreManager, ObjectMapper mapper) {
+        this.indexStoreManager = indexStoreManager;
         this.mapper = mapper;
     }
 
@@ -49,7 +51,7 @@ public class ElasticsearchMappingParser {
         Iterator<Map.Entry<String, JsonNode>> iterator = jsonNode.fields();
         while (iterator.hasNext()) {
             Map.Entry<String, JsonNode> entry = iterator.next();
-            if(entry.getKey().equals(ElasticsearchUtils.DOCUMENT_META_FIELD_NAME)) {
+            if (entry.getKey().equals(indexStoreManager.DOCUMENT_META_FIELD_NAME)) {
                 continue;
             }
             String currentField = (parentField == null) ? entry.getKey() : (String.format("%s.%s", parentField, entry.getKey()));

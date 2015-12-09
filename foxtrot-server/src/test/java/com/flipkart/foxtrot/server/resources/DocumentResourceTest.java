@@ -23,11 +23,12 @@ import com.flipkart.foxtrot.core.MockElasticsearchServer;
 import com.flipkart.foxtrot.core.TestUtils;
 import com.flipkart.foxtrot.core.common.CacheUtils;
 import com.flipkart.foxtrot.core.datastore.DataStore;
+import com.flipkart.foxtrot.core.manager.impl.ElasticsearchIndexStoreManager;
 import com.flipkart.foxtrot.core.querystore.QueryStore;
 import com.flipkart.foxtrot.core.querystore.QueryStoreException;
-import com.flipkart.foxtrot.core.table.TableMetadataManager;
 import com.flipkart.foxtrot.core.querystore.actions.spi.AnalyticsLoader;
 import com.flipkart.foxtrot.core.querystore.impl.*;
+import com.flipkart.foxtrot.core.table.TableMetadataManager;
 import com.flipkart.foxtrot.core.table.impl.TableMapStore;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.test.TestHazelcastInstanceFactory;
@@ -47,8 +48,6 @@ import org.mockito.Mockito;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -63,6 +62,7 @@ public class DocumentResourceTest extends ResourceTest {
     private ObjectMapper mapper = new ObjectMapper();
     private JsonNodeFactory factory = JsonNodeFactory.instance;
 
+    private ElasticsearchIndexStoreManager indexStoreManager;
     private TableMetadataManager tableMetadataManager;
     private MockElasticsearchServer elasticsearchServer;
     private HazelcastInstance hazelcastInstance;
@@ -70,8 +70,6 @@ public class DocumentResourceTest extends ResourceTest {
     private QueryStore queryStore;
 
     public DocumentResourceTest() throws Exception {
-
-        ElasticsearchUtils.setMapper(mapper);
         DataStore dataStore = TestUtils.getDataStore();
 
         //Initializing Cache Factory
@@ -80,25 +78,30 @@ public class DocumentResourceTest extends ResourceTest {
         when(hazelcastConnection.getHazelcast()).thenReturn(hazelcastInstance);
         CacheUtils.setCacheFactory(new DistributedCacheFactory(hazelcastConnection, mapper));
 
+        // Mock elasticsearch connection
         elasticsearchServer = new MockElasticsearchServer(UUID.randomUUID().toString());
         ElasticsearchConnection elasticsearchConnection = Mockito.mock(ElasticsearchConnection.class);
         when(elasticsearchConnection.getClient()).thenReturn(elasticsearchServer.getClient());
-        ElasticsearchUtils.initializeMappings(elasticsearchServer.getClient());
+
+        // Initialize table metadata manager
+        tableMetadataManager = Mockito.mock(TableMetadataManager.class);
+        tableMetadataManager.start();
+        when(tableMetadataManager.exists(anyString())).thenReturn(true);
+        when(tableMetadataManager.get(anyString())).thenReturn(TestUtils.TEST_TABLE);
+
+        this.indexStoreManager = new ElasticsearchIndexStoreManager(
+                elasticsearchConnection, new ElasticsearchConfig(), tableMetadataManager
+        );
+        indexStoreManager.initializeFoxtrot();
 
         Settings indexSettings = ImmutableSettings.settingsBuilder().put("number_of_replicas", 0).build();
         CreateIndexRequest createRequest = new CreateIndexRequest(TableMapStore.TABLE_META_INDEX).settings(indexSettings);
         elasticsearchServer.getClient().admin().indices().create(createRequest).actionGet();
         elasticsearchServer.getClient().admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
 
-        tableMetadataManager = Mockito.mock(TableMetadataManager.class);
-        tableMetadataManager.start();
-        when(tableMetadataManager.exists(anyString())).thenReturn(true);
-        when(tableMetadataManager.get(anyString())).thenReturn(TestUtils.TEST_TABLE);
-
-        AnalyticsLoader analyticsLoader = new AnalyticsLoader(tableMetadataManager, dataStore, queryStore, elasticsearchConnection);
+        AnalyticsLoader analyticsLoader = new AnalyticsLoader(tableMetadataManager, queryStore, indexStoreManager, elasticsearchConnection);
         TestUtils.registerActions(analyticsLoader, mapper);
-        ExecutorService executorService = Executors.newFixedThreadPool(1);
-        queryStore = new ElasticsearchQueryStore(tableMetadataManager, elasticsearchConnection, dataStore);
+        queryStore = new ElasticsearchQueryStore(tableMetadataManager, indexStoreManager, elasticsearchConnection, dataStore, mapper);
         queryStore = spy(queryStore);
     }
 
@@ -123,7 +126,7 @@ public class DocumentResourceTest extends ResourceTest {
                 System.currentTimeMillis(),
                 factory.objectNode().put("hello", "world"));
         client().resource("/v1/document/" + TestUtils.TEST_TABLE_NAME).type(MediaType.APPLICATION_JSON_TYPE).post(document);
-        elasticsearchServer.refresh(ElasticsearchUtils.getIndices(TestUtils.TEST_TABLE_NAME));
+        elasticsearchServer.refresh(indexStoreManager.getIndices(TestUtils.TEST_TABLE_NAME));
         Document response = queryStore.get(TestUtils.TEST_TABLE_NAME, id);
         compare(document, response);
     }
@@ -183,7 +186,7 @@ public class DocumentResourceTest extends ResourceTest {
         documents.add(document1);
         documents.add(document2);
         client().resource(String.format("/v1/document/%s/bulk", TestUtils.TEST_TABLE_NAME)).type(MediaType.APPLICATION_JSON_TYPE).post(documents);
-        elasticsearchServer.refresh(ElasticsearchUtils.getIndices(TestUtils.TEST_TABLE_NAME));
+        elasticsearchServer.refresh(indexStoreManager.getIndices(TestUtils.TEST_TABLE_NAME));
         compare(document1, queryStore.get(TestUtils.TEST_TABLE_NAME, id1));
         compare(document2, queryStore.get(TestUtils.TEST_TABLE_NAME, id2));
     }
@@ -275,7 +278,7 @@ public class DocumentResourceTest extends ResourceTest {
         String id = UUID.randomUUID().toString();
         Document document = new Document(id, System.currentTimeMillis(), factory.objectNode().put("D", "data"));
         queryStore.save(TestUtils.TEST_TABLE_NAME, document);
-        elasticsearchServer.refresh(ElasticsearchUtils.getIndices(TestUtils.TEST_TABLE_NAME));
+        elasticsearchServer.refresh(indexStoreManager.getIndices(TestUtils.TEST_TABLE_NAME));
         Document response = client().resource(String.format("/v1/document/%s/%s", TestUtils.TEST_TABLE_NAME, id))
                 .get(Document.class);
         compare(document, response);
@@ -316,7 +319,7 @@ public class DocumentResourceTest extends ResourceTest {
         documents.add(document1);
         documents.add(document2);
         queryStore.save(TestUtils.TEST_TABLE_NAME, documents);
-        elasticsearchServer.refresh(ElasticsearchUtils.getIndices(TestUtils.TEST_TABLE_NAME));
+        elasticsearchServer.refresh(indexStoreManager.getIndices(TestUtils.TEST_TABLE_NAME));
         String response = client().resource(String.format("/v1/document/%s", TestUtils.TEST_TABLE_NAME))
                 .queryParam("id", id1)
                 .queryParam("id", id2)

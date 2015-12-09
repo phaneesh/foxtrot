@@ -22,16 +22,14 @@ import com.flipkart.foxtrot.common.query.Filter;
 import com.flipkart.foxtrot.common.query.FilterCombinerType;
 import com.flipkart.foxtrot.common.query.general.AnyFilter;
 import com.flipkart.foxtrot.core.common.Action;
-import com.flipkart.foxtrot.core.datastore.DataStore;
+import com.flipkart.foxtrot.core.manager.impl.ElasticsearchIndexStoreManager;
 import com.flipkart.foxtrot.core.querystore.QueryStore;
 import com.flipkart.foxtrot.core.querystore.QueryStoreException;
-import com.flipkart.foxtrot.core.table.TableMetadataManager;
 import com.flipkart.foxtrot.core.querystore.actions.spi.AnalyticsProvider;
 import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchConnection;
-import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchUtils;
 import com.flipkart.foxtrot.core.querystore.query.ElasticSearchQueryGenerator;
+import com.flipkart.foxtrot.core.table.TableMetadataManager;
 import com.google.common.collect.Lists;
-
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -55,11 +53,11 @@ public class GroupAction extends Action<GroupRequest> {
 
     public GroupAction(GroupRequest parameter,
                        TableMetadataManager tableMetadataManager,
-                       DataStore dataStore,
                        QueryStore queryStore,
+                       ElasticsearchIndexStoreManager indexStoreManager,
                        ElasticsearchConnection connection,
                        String cacheToken) {
-        super(parameter, tableMetadataManager, dataStore, queryStore, connection, cacheToken);
+        super(parameter, tableMetadataManager, queryStore, indexStoreManager, connection, cacheToken);
     }
 
     @Override
@@ -71,15 +69,15 @@ public class GroupAction extends Action<GroupRequest> {
                 filterHashKey += 31 * filter.hashCode();
             }
         }
-        for (int i = 0; i < query.getNesting().size(); i++){
-            filterHashKey += 31 * query.getNesting().get(i).hashCode() * (i+1);
+        for (int i = 0; i < query.getNesting().size(); i++) {
+            filterHashKey += 31 * query.getNesting().get(i).hashCode() * (i + 1);
         }
         return String.format("%s-%d", query.getTable(), filterHashKey);
     }
 
     @Override
     public ActionResponse execute(GroupRequest parameter) throws QueryStoreException {
-        parameter.setTable(ElasticsearchUtils.getValidTableName(parameter.getTable()));
+        parameter.setTable(getIndexStoreManager().getValidTableName(parameter.getTable()));
         if (null == parameter.getFilters()) {
             parameter.setFilters(Lists.<Filter>newArrayList(new AnyFilter(parameter.getTable())));
         }
@@ -88,8 +86,8 @@ public class GroupAction extends Action<GroupRequest> {
         }
         try {
             SearchRequestBuilder query = getConnection().getClient()
-                                            .prepareSearch(ElasticsearchUtils.getIndices(parameter.getTable(), parameter))
-                                            .setIndicesOptions(Utils.indicesOptions());
+                    .prepareSearch(getIndexStoreManager().getIndices(parameter.getTable(), parameter))
+                    .setIndicesOptions(Utils.indicesOptions());
             TermsBuilder rootBuilder = null;
             TermsBuilder termsBuilder = null;
             for (String field : parameter.getNesting()) {

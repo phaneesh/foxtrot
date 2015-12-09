@@ -3,7 +3,7 @@ package com.flipkart.foxtrot.core.table.impl;
 import com.flipkart.foxtrot.common.Table;
 import com.flipkart.foxtrot.core.datastore.DataStore;
 import com.flipkart.foxtrot.core.datastore.DataStoreException;
-import com.flipkart.foxtrot.core.querystore.QueryStore;
+import com.flipkart.foxtrot.core.manager.IndexStoreManager;
 import com.flipkart.foxtrot.core.table.TableManager;
 import com.flipkart.foxtrot.core.table.TableManagerException;
 import com.flipkart.foxtrot.core.table.TableMetadataManager;
@@ -16,12 +16,14 @@ import java.util.List;
 public class FoxtrotTableManager implements TableManager {
 
     private final TableMetadataManager metadataManager;
-    private final QueryStore queryStore;
+    private final IndexStoreManager indexStoreManager;
     private final DataStore dataStore;
 
-    public FoxtrotTableManager(TableMetadataManager metadataManager, QueryStore queryStore, DataStore dataStore) {
+    public FoxtrotTableManager(TableMetadataManager metadataManager,
+                               IndexStoreManager indexStoreManager,
+                               DataStore dataStore) {
         this.metadataManager = metadataManager;
-        this.queryStore = queryStore;
+        this.indexStoreManager = indexStoreManager;
         this.dataStore = dataStore;
     }
 
@@ -33,7 +35,7 @@ public class FoxtrotTableManager implements TableManager {
             if (metadataManager.exists(table.getName())) {
                 throw new TableManagerException(TableManagerException.ErrorCode.BAD_REQUEST, "table already exists");
             }
-            queryStore.initializeTable(table.getName());
+            indexStoreManager.initializeTable(table.getName());
             dataStore.initializeTable(table);
             metadataManager.save(table);
         } catch (DataStoreException e) {

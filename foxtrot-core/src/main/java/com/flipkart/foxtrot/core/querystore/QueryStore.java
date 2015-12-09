@@ -28,8 +28,6 @@ import java.util.Set;
  */
 public interface QueryStore {
 
-    void initializeTable(final String table) throws QueryStoreException;
-
     void save(final String table, final Document document) throws QueryStoreException;
 
     void save(final String table, final List<Document> documents) throws QueryStoreException;
@@ -42,9 +40,4 @@ public interface QueryStore {
 
     TableFieldMapping getFieldMappings(final String table) throws QueryStoreException;
 
-    void cleanupAll() throws QueryStoreException;
-
-    void cleanup(final String table) throws QueryStoreException;
-
-    void cleanup(final Set<String> tables) throws QueryStoreException;
 }

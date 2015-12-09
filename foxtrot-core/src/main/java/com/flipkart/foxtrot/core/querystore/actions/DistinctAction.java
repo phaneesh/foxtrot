@@ -8,16 +8,14 @@ import com.flipkart.foxtrot.common.query.FilterCombinerType;
 import com.flipkart.foxtrot.common.query.ResultSort;
 import com.flipkart.foxtrot.common.query.general.AnyFilter;
 import com.flipkart.foxtrot.core.common.Action;
-import com.flipkart.foxtrot.core.datastore.DataStore;
+import com.flipkart.foxtrot.core.manager.impl.ElasticsearchIndexStoreManager;
 import com.flipkart.foxtrot.core.querystore.QueryStore;
 import com.flipkart.foxtrot.core.querystore.QueryStoreException;
-import com.flipkart.foxtrot.core.table.TableMetadataManager;
 import com.flipkart.foxtrot.core.querystore.actions.spi.AnalyticsProvider;
 import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchConnection;
-import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchUtils;
 import com.flipkart.foxtrot.core.querystore.query.ElasticSearchQueryGenerator;
+import com.flipkart.foxtrot.core.table.TableMetadataManager;
 import com.google.common.collect.Lists;
-
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -40,13 +38,13 @@ import java.util.List;
 public class DistinctAction extends Action<DistinctRequest> {
     private static final Logger logger = LoggerFactory.getLogger(GroupAction.class.getSimpleName());
 
-    public DistinctAction(DistinctRequest request,
+    public DistinctAction(DistinctRequest parameter,
                           TableMetadataManager tableMetadataManager,
-                          DataStore dataStore,
                           QueryStore queryStore,
+                          ElasticsearchIndexStoreManager indexStoreManager,
                           ElasticsearchConnection connection,
                           String cacheToken) {
-        super(request, tableMetadataManager, dataStore, queryStore, connection, cacheToken);
+        super(parameter, tableMetadataManager, queryStore, indexStoreManager, connection, cacheToken);
     }
 
     @Override
@@ -58,15 +56,15 @@ public class DistinctAction extends Action<DistinctRequest> {
                 filterHashKey += 31 * filter.hashCode();
             }
         }
-        for (int i = 0; i < query.getNesting().size(); i++){
-            filterHashKey += 31 * query.getNesting().get(i).hashCode() * (i+1);
+        for (int i = 0; i < query.getNesting().size(); i++) {
+            filterHashKey += 31 * query.getNesting().get(i).hashCode() * (i + 1);
         }
         return String.format("%s-%d", query.getTable(), filterHashKey);
     }
 
     @Override
     public ActionResponse execute(DistinctRequest request) throws QueryStoreException {
-        request.setTable(ElasticsearchUtils.getValidTableName(request.getTable()));
+        request.setTable(getIndexStoreManager().getValidTableName(request.getTable()));
         if (null == request.getFilters()) {
             request.setFilters(Lists.<Filter>newArrayList(new AnyFilter(request.getTable())));
         }
@@ -75,8 +73,8 @@ public class DistinctAction extends Action<DistinctRequest> {
         }
         try {
             SearchRequestBuilder query = getConnection().getClient()
-                                               .prepareSearch(ElasticsearchUtils.getIndices(request.getTable(), request))
-                                               .setIndicesOptions(Utils.indicesOptions());
+                    .prepareSearch(getIndexStoreManager().getIndices(request.getTable(), request))
+                    .setIndicesOptions(Utils.indicesOptions());
             TermsBuilder rootBuilder = null;
             TermsBuilder termsBuilder = null;
 
@@ -124,7 +122,7 @@ public class DistinctAction extends Action<DistinctRequest> {
     private DistinctResponse getDistinctResponse(DistinctRequest request, Aggregations aggregations) {
         DistinctResponse response = new DistinctResponse();
         List<String> headerList = new ArrayList<String>();
-        for (ResultSort nestedField : request.getNesting()){
+        for (ResultSort nestedField : request.getNesting()) {
             headerList.add(nestedField.getField());
         }
         response.setHeaders(headerList);
@@ -153,7 +151,7 @@ public class DistinctAction extends Action<DistinctRequest> {
         return parentKey == null ? currentKey : parentKey + Constants.SEPARATOR + currentKey;
     }
 
-    private List<String> getValueList(String parentKey, String currentKey){
+    private List<String> getValueList(String parentKey, String currentKey) {
         String finalValue = getProperKey(parentKey, currentKey);
         String[] valuesList = finalValue.split(Constants.SEPARATOR);
         return Arrays.asList(valuesList);

@@ -25,6 +25,7 @@ import com.flipkart.foxtrot.core.datastore.DataStore;
 import com.flipkart.foxtrot.core.datastore.impl.hbase.HBaseDataStore;
 import com.flipkart.foxtrot.core.datastore.impl.hbase.HbaseConfig;
 import com.flipkart.foxtrot.core.datastore.impl.hbase.HbaseTableConnection;
+import com.flipkart.foxtrot.core.manager.impl.ElasticsearchIndexStoreManager;
 import com.flipkart.foxtrot.core.querystore.QueryExecutor;
 import com.flipkart.foxtrot.core.querystore.QueryStore;
 import com.flipkart.foxtrot.core.querystore.actions.spi.AnalyticsLoader;
@@ -89,20 +90,21 @@ public class FoxtrotServer extends Service<FoxtrotServerConfiguration> {
         ClusterConfig clusterConfig = configuration.getCluster();
         HazelcastConnection hazelcastConnection = new HazelcastConnection(clusterConfig, objectMapper);
 
-        ElasticsearchUtils.setMapper(objectMapper);
-
         TableMetadataManager tableMetadataManager = new DistributedTableMetadataManager(hazelcastConnection,
                 elasticsearchConnection);
-        DataStore dataStore = new HBaseDataStore(HBaseTableConnection, objectMapper);
-        QueryStore queryStore = new ElasticsearchQueryStore(tableMetadataManager, elasticsearchConnection, dataStore);
-        FoxtrotTableManager tableManager = new FoxtrotTableManager(tableMetadataManager, queryStore, dataStore);
 
-        AnalyticsLoader analyticsLoader = new AnalyticsLoader(tableMetadataManager, dataStore, queryStore, elasticsearchConnection);
+        ElasticsearchIndexStoreManager indexStoreManager = new ElasticsearchIndexStoreManager(elasticsearchConnection,
+                elasticsearchConfig, tableMetadataManager);
+        DataStore dataStore = new HBaseDataStore(HBaseTableConnection, objectMapper);
+        QueryStore queryStore = new ElasticsearchQueryStore(tableMetadataManager, indexStoreManager,
+                elasticsearchConnection, dataStore, objectMapper);
+        FoxtrotTableManager tableManager = new FoxtrotTableManager(tableMetadataManager, indexStoreManager, dataStore);
+        AnalyticsLoader analyticsLoader = new AnalyticsLoader(tableMetadataManager, queryStore, indexStoreManager, elasticsearchConnection);
 
         QueryExecutor executor = new QueryExecutor(analyticsLoader, executorService);
 
         DataDeletionManagerConfig dataDeletionManagerConfig = configuration.getTableDataManagerConfig();
-        DataDeletionManager dataDeletionManager = new DataDeletionManager(dataDeletionManagerConfig, queryStore);
+        DataDeletionManager dataDeletionManager = new DataDeletionManager(dataDeletionManagerConfig, indexStoreManager);
 
         List<HealthCheck> healthChecks = Lists.newArrayList();
         healthChecks.add(new ElasticSearchHealthCheck("ES Health Check", elasticsearchConnection));

@@ -16,10 +16,13 @@
 
 package com.flipkart.foxtrot.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.foxtrot.core.datastore.impl.hbase.HBaseUtil;
-import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchConfig;
+import com.flipkart.foxtrot.core.manager.impl.ElasticsearchIndexStoreManager;
 import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchConnection;
-import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchUtils;
+import com.flipkart.foxtrot.core.querystore.impl.HazelcastConnection;
+import com.flipkart.foxtrot.core.table.TableMetadataManager;
+import com.flipkart.foxtrot.core.table.impl.DistributedTableMetadataManager;
 import com.flipkart.foxtrot.server.config.FoxtrotServerConfiguration;
 import com.yammer.dropwizard.cli.ConfiguredCommand;
 import com.yammer.dropwizard.config.Bootstrap;
@@ -28,8 +31,6 @@ import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequestBuilder
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
-import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
-import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,10 +47,15 @@ public class InitializerCommand extends ConfiguredCommand<FoxtrotServerConfigura
     protected void run(Bootstrap<FoxtrotServerConfiguration> bootstrap,
                        Namespace namespace,
                        FoxtrotServerConfiguration configuration) throws Exception {
-        ElasticsearchConfig esConfig = configuration.getElasticsearch();
-        ElasticsearchConnection connection = new ElasticsearchConnection(esConfig);
-        connection.start();
-        ClusterHealthResponse clusterHealth = new ClusterHealthRequestBuilder(connection.getClient().admin().cluster())
+        ElasticsearchConnection elasticsearchConnection = new ElasticsearchConnection(configuration.getElasticsearch());
+        HazelcastConnection hazelcastConnection = new HazelcastConnection(configuration.getCluster(), new ObjectMapper());
+        TableMetadataManager tableMetadataManager = new DistributedTableMetadataManager(hazelcastConnection,
+                elasticsearchConnection);
+        ElasticsearchIndexStoreManager indexStoreManager = new ElasticsearchIndexStoreManager(elasticsearchConnection,
+                configuration.getElasticsearch(), tableMetadataManager);
+        indexStoreManager.initializeFoxtrot();
+
+        ClusterHealthResponse clusterHealth = new ClusterHealthRequestBuilder(elasticsearchConnection.getClient().admin().cluster())
                 .execute()
                 .get();
 
@@ -58,24 +64,11 @@ public class InitializerCommand extends ConfiguredCommand<FoxtrotServerConfigura
 
         logger.info("# data nodes: {}, Setting replica count to: {}", numDataNodes, numReplicas);
 
-        createMetaIndex(connection, "consoles", numDataNodes - 1);
-        createMetaIndex(connection, "table-meta", numDataNodes - 1);
-
-        PutIndexTemplateResponse response = new PutIndexTemplateRequestBuilder(connection.getClient().admin().indices(), "template_foxtrot_mappings")
-                .setTemplate("foxtrot-*")
-                .setSettings(
-                        ImmutableSettings.builder()
-                                .put("number_of_shards", 10)
-                                .put("number_of_replicas", numReplicas)
-                )
-                .addMapping("document", ElasticsearchUtils.getDocumentMapping())
-                .execute()
-                .get();
-        logger.info("Create mapping: {}", response.isAcknowledged());
+        createMetaIndex(elasticsearchConnection, "consoles", numDataNodes - 1);
+        createMetaIndex(elasticsearchConnection, "table-meta", numDataNodes - 1);
 
         logger.info("Creating hbase table");
         HBaseUtil.createTable(configuration.getHbase(), configuration.getHbase().getTableName());
-
     }
 
     private void createMetaIndex(final ElasticsearchConnection connection,

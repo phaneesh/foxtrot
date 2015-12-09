@@ -18,6 +18,8 @@ package com.flipkart.foxtrot.core.querystore.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.foxtrot.common.Table;
 import com.flipkart.foxtrot.core.MockElasticsearchServer;
+import com.flipkart.foxtrot.core.manager.impl.ElasticsearchIndexStoreManager;
+import com.flipkart.foxtrot.core.table.TableMetadataManager;
 import com.flipkart.foxtrot.core.table.impl.TableMapStore;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -56,19 +58,27 @@ public class TableMapStoreTest {
 
     @Before
     public void setUp() throws Exception {
-        mapper = spy(mapper);
-        elasticsearchServer = new MockElasticsearchServer(UUID.randomUUID().toString());
-        ElasticsearchUtils.initializeMappings(elasticsearchServer.getClient());
-        elasticsearchConnection = Mockito.mock(ElasticsearchConnection.class);
-        when(elasticsearchConnection.getClient()).thenReturn(elasticsearchServer.getClient());
+        this.mapper = spy(this.mapper);
+
+        // Mock elasticsearch connection
+        this.elasticsearchServer = new MockElasticsearchServer(UUID.randomUUID().toString());
+        this.elasticsearchConnection = Mockito.mock(ElasticsearchConnection.class);
+        when(this.elasticsearchConnection.getClient()).thenReturn(this.elasticsearchServer.getClient());
+
+        // Ensure that table exists before saving/reading data from it
+        TableMetadataManager tableMetadataManager = Mockito.mock(TableMetadataManager.class);
+        ElasticsearchIndexStoreManager indexStoreManager = new ElasticsearchIndexStoreManager(
+                this.elasticsearchConnection, new ElasticsearchConfig(), tableMetadataManager
+        );
+        indexStoreManager.initializeFoxtrot();
 
         //Create index for table meta. Not created automatically
         Settings indexSettings = ImmutableSettings.settingsBuilder().put("number_of_replicas", 0).build();
         CreateIndexRequest createRequest = new CreateIndexRequest(TableMapStore.TABLE_META_INDEX).settings(indexSettings);
-        elasticsearchServer.getClient().admin().indices().create(createRequest).actionGet();
-        elasticsearchServer.getClient().admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
-        TableMapStore.Factory factory = new TableMapStore.Factory(elasticsearchConnection);
-        tableMapStore = factory.newMapStore(null, null);
+        this.elasticsearchServer.getClient().admin().indices().create(createRequest).actionGet();
+        this.elasticsearchServer.getClient().admin().cluster().prepareHealth().setWaitForGreenStatus().execute().actionGet();
+        TableMapStore.Factory factory = new TableMapStore.Factory(this.elasticsearchConnection);
+        this.tableMapStore = factory.newMapStore(null, null);
     }
 
     @After

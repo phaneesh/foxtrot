@@ -15,9 +15,18 @@
  */
 package com.flipkart.foxtrot.core.querystore.actions;
 
-import java.util.Collections;
-import java.util.Vector;
-
+import com.flipkart.foxtrot.common.Document;
+import com.flipkart.foxtrot.common.query.*;
+import com.flipkart.foxtrot.common.query.general.AnyFilter;
+import com.flipkart.foxtrot.core.common.Action;
+import com.flipkart.foxtrot.core.manager.impl.ElasticsearchIndexStoreManager;
+import com.flipkart.foxtrot.core.querystore.QueryStore;
+import com.flipkart.foxtrot.core.querystore.QueryStoreException;
+import com.flipkart.foxtrot.core.querystore.actions.spi.AnalyticsProvider;
+import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchConnection;
+import com.flipkart.foxtrot.core.querystore.query.ElasticSearchQueryGenerator;
+import com.flipkart.foxtrot.core.table.TableMetadataManager;
+import com.google.common.collect.Lists;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -26,23 +35,8 @@ import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.flipkart.foxtrot.common.Document;
-import com.flipkart.foxtrot.common.query.Filter;
-import com.flipkart.foxtrot.common.query.FilterCombinerType;
-import com.flipkart.foxtrot.common.query.Query;
-import com.flipkart.foxtrot.common.query.QueryResponse;
-import com.flipkart.foxtrot.common.query.ResultSort;
-import com.flipkart.foxtrot.common.query.general.AnyFilter;
-import com.flipkart.foxtrot.core.common.Action;
-import com.flipkart.foxtrot.core.datastore.DataStore;
-import com.flipkart.foxtrot.core.querystore.QueryStore;
-import com.flipkart.foxtrot.core.querystore.QueryStoreException;
-import com.flipkart.foxtrot.core.table.TableMetadataManager;
-import com.flipkart.foxtrot.core.querystore.actions.spi.AnalyticsProvider;
-import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchConnection;
-import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchUtils;
-import com.flipkart.foxtrot.core.querystore.query.ElasticSearchQueryGenerator;
-import com.google.common.collect.Lists;
+import java.util.Collections;
+import java.util.Vector;
 
 /**
  * User: Santanu Sinha (santanu.sinha@flipkart.com)
@@ -55,11 +49,11 @@ public class FilterAction extends Action<Query> {
 
     public FilterAction(Query parameter,
                         TableMetadataManager tableMetadataManager,
-                        DataStore dataStore,
                         QueryStore queryStore,
+                        ElasticsearchIndexStoreManager indexStoreManager,
                         ElasticsearchConnection connection,
                         String cacheToken) {
-        super(parameter, tableMetadataManager, dataStore, queryStore, connection, cacheToken);
+        super(parameter, tableMetadataManager, queryStore, indexStoreManager, connection, cacheToken);
     }
 
     @Override
@@ -79,7 +73,7 @@ public class FilterAction extends Action<Query> {
 
     @Override
     public QueryResponse execute(Query parameter) throws QueryStoreException {
-        parameter.setTable(ElasticsearchUtils.getValidTableName(parameter.getTable()));
+        parameter.setTable(getIndexStoreManager().getValidTableName(parameter.getTable()));
         if (null == parameter.getFilters() || parameter.getFilters().isEmpty()) {
             parameter.setFilters(Lists.<Filter>newArrayList(new AnyFilter(parameter.getTable())));
         }
@@ -96,8 +90,8 @@ public class FilterAction extends Action<Query> {
                 throw new QueryStoreException(QueryStoreException.ErrorCode.NO_SUCH_TABLE,
                         "There is no table called: " + query.getTable());
             }*/
-            search = getConnection().getClient().prepareSearch(ElasticsearchUtils.getIndices(parameter.getTable(), parameter))
-                    .setTypes(ElasticsearchUtils.DOCUMENT_TYPE_NAME)
+            search = getConnection().getClient().prepareSearch(getIndexStoreManager().getIndices(parameter.getTable(), parameter))
+                    .setTypes(getIndexStoreManager().DOCUMENT_TYPE_NAME)
                     .setIndicesOptions(Utils.indicesOptions())
                     .setQuery(new ElasticSearchQueryGenerator(FilterCombinerType.and).genFilter(parameter.getFilters()))
                     .setSearchType(SearchType.QUERY_THEN_FETCH)
