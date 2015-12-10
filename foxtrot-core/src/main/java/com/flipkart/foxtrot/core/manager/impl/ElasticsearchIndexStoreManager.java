@@ -51,7 +51,7 @@ public class ElasticsearchIndexStoreManager implements IndexStoreManager {
     public void initializeFoxtrot() throws StoreManagerException {
         PutIndexTemplateRequestBuilder builder = new PutIndexTemplateRequestBuilder(elasticsearchConnection.getClient().admin().indices(),
                 "template_foxtrot_mappings");
-        builder.setTemplate(String.format("%s-*", elasticsearchConfig.getIndexPrefix()));
+        builder.setTemplate(String.format("%s-*", elasticsearchConfig.getTableNamePrefix()));
         try {
             builder.addMapping(DOCUMENT_TYPE_NAME, getDocumentMapping());
         } catch (IOException e) {
@@ -123,8 +123,8 @@ public class ElasticsearchIndexStoreManager implements IndexStoreManager {
     private ElasticsearchParsedIndex parseIndexName(final String index) {
         ElasticsearchParsedIndex parsedIndex = new ElasticsearchParsedIndex();
         // Parse table name
-        if (index.startsWith(elasticsearchConfig.getIndexPrefix()) && index.endsWith(TABLENAME_POSTFIX)) {
-            String tempIndex = index.substring(elasticsearchConfig.getIndexPrefix().length() + 1);
+        if (index.startsWith(elasticsearchConfig.getTableNamePrefix()) && index.endsWith(TABLENAME_POSTFIX)) {
+            String tempIndex = index.substring(elasticsearchConfig.getTableNamePrefix().length() + 1);
             int position = tempIndex.lastIndexOf(String.format("-%s", TABLENAME_POSTFIX));
             parsedIndex.setTable(tempIndex.substring(0, position));
         } else {
@@ -140,7 +140,7 @@ public class ElasticsearchIndexStoreManager implements IndexStoreManager {
     }
 
     private String getIndexPrefix(final String table) {
-        return String.format("%s-%s-%s-", elasticsearchConfig.getIndexPrefix(), table, TABLENAME_POSTFIX);
+        return String.format("%s-%s-%s-", elasticsearchConfig.getTableNamePrefix(), table, TABLENAME_POSTFIX);
     }
 
     private void deleteIndices(final List<String> indicesToDelete) {
