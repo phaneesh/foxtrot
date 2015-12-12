@@ -17,8 +17,8 @@ package com.flipkart.foxtrot.core.common;
 
 import com.flipkart.foxtrot.common.ActionRequest;
 import com.flipkart.foxtrot.common.ActionResponse;
-import com.flipkart.foxtrot.common.query.Filter;
-import com.flipkart.foxtrot.common.query.numeric.LessThanFilter;
+import com.flipkart.foxtrot.common.filter.Filter;
+import com.flipkart.foxtrot.common.filter.numeric.LessThanFilter;
 import com.flipkart.foxtrot.core.datastore.DataStore;
 import com.flipkart.foxtrot.core.querystore.QueryStore;
 import com.flipkart.foxtrot.core.querystore.QueryStoreException;

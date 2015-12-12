@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.flipkart.foxtrot.common.query.general;
+package com.flipkart.foxtrot.common.filter.string;
 
-import com.flipkart.foxtrot.common.query.Filter;
-import com.flipkart.foxtrot.common.query.FilterOperator;
-import com.flipkart.foxtrot.common.query.FilterVisitor;
+import com.flipkart.foxtrot.common.filter.Filter;
+import com.flipkart.foxtrot.common.filter.FilterOperator;
+import com.flipkart.foxtrot.common.filter.FilterVisitor;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import javax.validation.constraints.NotNull;
@@ -25,14 +25,14 @@ import javax.validation.constraints.NotNull;
 /**
  * User: Santanu Sinha (santanu.sinha@flipkart.com)
  * Date: 14/03/14
- * Time: 3:35 PM
+ * Time: 3:46 PM
  */
-public class NotEqualsFilter extends Filter {
+public class ContainsFilter extends Filter {
     @NotNull
-    private Object value;
+    private String value;
 
-    public NotEqualsFilter() {
-        super(FilterOperator.not_equals);
+    public ContainsFilter() {
+        super(FilterOperator.contains);
     }
 
     @Override
@@ -40,11 +40,11 @@ public class NotEqualsFilter extends Filter {
         visitor.visit(this);
     }
 
-    public Object getValue() {
+    public String getValue() {
         return value;
     }
 
-    public void setValue(Object value) {
+    public void setValue(String value) {
         this.value = value;
     }
 
@@ -54,7 +54,7 @@ public class NotEqualsFilter extends Filter {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
 
-        NotEqualsFilter that = (NotEqualsFilter) o;
+        ContainsFilter that = (ContainsFilter) o;
 
         return value.equals(that.value);
 
@@ -66,6 +66,7 @@ public class NotEqualsFilter extends Filter {
         result = 31 * result + value.hashCode();
         return result;
     }
+
 
     @Override
     public String toString() {

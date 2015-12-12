@@ -15,14 +15,14 @@
  */
 package com.flipkart.foxtrot.core.querystore.query;
 
-import com.flipkart.foxtrot.common.query.Filter;
-import com.flipkart.foxtrot.common.query.FilterCombinerType;
-import com.flipkart.foxtrot.common.query.FilterVisitor;
-import com.flipkart.foxtrot.common.query.datetime.LastFilter;
-import com.flipkart.foxtrot.common.query.datetime.TimeWindow;
-import com.flipkart.foxtrot.common.query.general.*;
-import com.flipkart.foxtrot.common.query.numeric.*;
-import com.flipkart.foxtrot.common.query.string.ContainsFilter;
+import com.flipkart.foxtrot.common.filter.Filter;
+import com.flipkart.foxtrot.common.filter.FilterCombiner;
+import com.flipkart.foxtrot.common.filter.FilterVisitor;
+import com.flipkart.foxtrot.common.filter.datetime.LastFilter;
+import com.flipkart.foxtrot.common.filter.datetime.TimeWindow;
+import com.flipkart.foxtrot.common.filter.general.*;
+import com.flipkart.foxtrot.common.filter.numeric.*;
+import com.flipkart.foxtrot.common.filter.string.ContainsFilter;
 import org.elasticsearch.index.query.*;
 
 import java.util.List;
@@ -34,9 +34,9 @@ import java.util.List;
  */
 public class ElasticSearchQueryGenerator extends FilterVisitor {
     private final BoolFilterBuilder boolFilterBuilder;
-    private final FilterCombinerType combinerType;
+    private final FilterCombiner combinerType;
 
-    public ElasticSearchQueryGenerator(FilterCombinerType combinerType) {
+    public ElasticSearchQueryGenerator(FilterCombiner combinerType) {
         this.boolFilterBuilder = FilterBuilders.boolFilter();
         this.combinerType = combinerType;
     }
@@ -64,10 +64,10 @@ public class ElasticSearchQueryGenerator extends FilterVisitor {
     public void visit(ContainsFilter stringContainsFilterElement) throws Exception {
         addFilter(
                 FilterBuilders.queryFilter(
-                QueryBuilders.queryString(
-                        stringContainsFilterElement.getValue())
-                        .defaultField(stringContainsFilterElement.getField() + ".analyzed"))
-                .cache(false));
+                        QueryBuilders.queryString(
+                                stringContainsFilterElement.getValue())
+                                .defaultField(stringContainsFilterElement.getField() + ".analyzed"))
+                        .cache(false));
     }
 
     @Override
@@ -129,17 +129,18 @@ public class ElasticSearchQueryGenerator extends FilterVisitor {
                         .cache(false));
     }
 
-    @Override public void visit(MissingFilter missingFilter) throws Exception {
+    @Override
+    public void visit(MissingFilter missingFilter) throws Exception {
         addFilter(FilterBuilders.missingFilter(missingFilter.getField()));
     }
 
     private void addFilter(FilterBuilder elasticSearchFilter) throws Exception {
-        if (combinerType == FilterCombinerType.and) {
+        if (combinerType == FilterCombiner.and) {
             boolFilterBuilder.must(elasticSearchFilter);
             return;
         }
         //boolFilterBuilder.should(elasticSearchFilter);
-        throw new UnsupportedOperationException(FilterCombinerType.or.name() + " is not supported");
+        throw new UnsupportedOperationException(FilterCombiner.or.name() + " is not supported");
     }
 
     public QueryBuilder genFilter(List<Filter> filters) throws Exception {

@@ -13,19 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.flipkart.foxtrot.common.query.numeric;
+package com.flipkart.foxtrot.common.filter.numeric;
 
-import com.flipkart.foxtrot.common.query.FilterOperator;
-import com.flipkart.foxtrot.common.query.FilterVisitor;
+import com.flipkart.foxtrot.common.filter.FilterOperator;
+import com.flipkart.foxtrot.common.filter.FilterVisitor;
 
 /**
  * User: Santanu Sinha (santanu.sinha@flipkart.com)
  * Date: 14/03/14
  * Time: 8:17 PM
  */
-public class LessEqualFilter extends NumericBinaryFilter {
-    public LessEqualFilter() {
-        super(FilterOperator.less_equal);
+public class LessThanFilter extends NumericBinaryFilter {
+    public LessThanFilter() {
+        super(FilterOperator.less_than);
     }
 
     @Override

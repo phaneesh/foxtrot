@@ -2,7 +2,7 @@ package com.flipkart.foxtrot.common.stats;
 
 import com.flipkart.foxtrot.common.ActionRequest;
 import com.flipkart.foxtrot.common.Period;
-import com.flipkart.foxtrot.common.query.FilterCombinerType;
+import com.flipkart.foxtrot.common.filter.FilterCombiner;
 import org.hibernate.validator.constraints.NotEmpty;
 
 import javax.validation.constraints.NotNull;
@@ -20,7 +20,7 @@ public class StatsTrendRequest extends ActionRequest {
     private String field;
 
     @NotNull
-    private FilterCombinerType combiner = FilterCombinerType.and;
+    private FilterCombiner combiner = FilterCombiner.and;
 
     @NotNull
     private Period period = Period.hours;
@@ -47,11 +47,11 @@ public class StatsTrendRequest extends ActionRequest {
         this.field = field;
     }
 
-    public FilterCombinerType getCombiner() {
+    public FilterCombiner getCombiner() {
         return combiner;
     }
 
-    public void setCombiner(FilterCombinerType combiner) {
+    public void setCombiner(FilterCombiner combiner) {
         this.combiner = combiner;
     }
 

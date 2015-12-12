@@ -16,13 +16,13 @@
 
 package com.flipkart.foxtrot.core.common;
 
-import com.flipkart.foxtrot.common.query.Filter;
-import com.flipkart.foxtrot.common.query.FilterVisitor;
-import com.flipkart.foxtrot.common.query.datetime.LastFilter;
-import com.flipkart.foxtrot.common.query.datetime.TimeWindow;
-import com.flipkart.foxtrot.common.query.general.*;
-import com.flipkart.foxtrot.common.query.numeric.*;
-import com.flipkart.foxtrot.common.query.string.ContainsFilter;
+import com.flipkart.foxtrot.common.filter.Filter;
+import com.flipkart.foxtrot.common.filter.FilterVisitor;
+import com.flipkart.foxtrot.common.filter.datetime.LastFilter;
+import com.flipkart.foxtrot.common.filter.datetime.TimeWindow;
+import com.flipkart.foxtrot.common.filter.general.*;
+import com.flipkart.foxtrot.common.filter.numeric.*;
+import com.flipkart.foxtrot.common.filter.string.ContainsFilter;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -43,8 +43,8 @@ public class PeriodSelector extends FilterVisitor {
     }
 
     public Interval analyze(long currentTime) throws Exception {
-        for(Filter filter : filters) {
-            if(filter.isTemporal()) {
+        for (Filter filter : filters) {
+            if (filter.isTemporal()) {
                 filter.accept(this);
             }
         }
@@ -114,7 +114,7 @@ public class PeriodSelector extends FilterVisitor {
     }
 
     @Override
-    public void visit(MissingFilter missingFilter) throws Exception{
-        
+    public void visit(MissingFilter missingFilter) throws Exception {
+
     }
 }

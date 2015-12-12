@@ -18,9 +18,9 @@ package com.flipkart.foxtrot.core.querystore.actions;
 import com.flipkart.foxtrot.common.ActionResponse;
 import com.flipkart.foxtrot.common.group.GroupRequest;
 import com.flipkart.foxtrot.common.group.GroupResponse;
-import com.flipkart.foxtrot.common.query.Filter;
-import com.flipkart.foxtrot.common.query.FilterCombinerType;
-import com.flipkart.foxtrot.common.query.general.AnyFilter;
+import com.flipkart.foxtrot.common.filter.Filter;
+import com.flipkart.foxtrot.common.filter.FilterCombiner;
+import com.flipkart.foxtrot.common.filter.general.AnyFilter;
 import com.flipkart.foxtrot.core.common.Action;
 import com.flipkart.foxtrot.core.datastore.DataStore;
 import com.flipkart.foxtrot.core.querystore.QueryStore;
@@ -108,7 +108,7 @@ public class GroupAction extends Action<GroupRequest> {
                     rootBuilder = termsBuilder;
                 }
             }
-            query.setQuery(new ElasticSearchQueryGenerator(FilterCombinerType.and)
+            query.setQuery(new ElasticSearchQueryGenerator(FilterCombiner.and)
                     .genFilter(parameter.getFilters()))
                     .setSearchType(SearchType.COUNT)
                     .addAggregation(rootBuilder);

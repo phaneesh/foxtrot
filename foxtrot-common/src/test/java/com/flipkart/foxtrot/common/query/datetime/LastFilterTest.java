@@ -2,6 +2,8 @@ package com.flipkart.foxtrot.common.query.datetime;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.flipkart.foxtrot.common.filter.datetime.LastFilter;
+import com.flipkart.foxtrot.common.filter.datetime.TimeWindow;
 import org.junit.Assert;
 import org.junit.Test;
 

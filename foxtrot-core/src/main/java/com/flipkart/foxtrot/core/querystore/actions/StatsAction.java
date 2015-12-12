@@ -1,8 +1,8 @@
 package com.flipkart.foxtrot.core.querystore.actions;
 
 import com.flipkart.foxtrot.common.ActionResponse;
-import com.flipkart.foxtrot.common.query.Filter;
-import com.flipkart.foxtrot.common.query.general.AnyFilter;
+import com.flipkart.foxtrot.common.filter.Filter;
+import com.flipkart.foxtrot.common.filter.general.AnyFilter;
 import com.flipkart.foxtrot.common.stats.StatsRequest;
 import com.flipkart.foxtrot.common.stats.StatsResponse;
 import com.flipkart.foxtrot.common.stats.StatsValue;
@@ -10,13 +10,12 @@ import com.flipkart.foxtrot.core.common.Action;
 import com.flipkart.foxtrot.core.datastore.DataStore;
 import com.flipkart.foxtrot.core.querystore.QueryStore;
 import com.flipkart.foxtrot.core.querystore.QueryStoreException;
-import com.flipkart.foxtrot.core.table.TableMetadataManager;
 import com.flipkart.foxtrot.core.querystore.actions.spi.AnalyticsProvider;
 import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchConnection;
 import com.flipkart.foxtrot.core.querystore.impl.ElasticsearchUtils;
 import com.flipkart.foxtrot.core.querystore.query.ElasticSearchQueryGenerator;
+import com.flipkart.foxtrot.core.table.TableMetadataManager;
 import com.google.common.collect.Lists;
-
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.search.aggregations.Aggregations;
@@ -102,7 +101,7 @@ public class StatsAction extends Action<StatsRequest> {
         StatsValue statsValue = new StatsValue();
 
         InternalExtendedStats extendedStats = InternalExtendedStats.class.cast(aggregations.getAsMap().get(metricKey));
-        Map<String, Number> stats = new HashMap<String, Number>();
+        Map<String, Number> stats = new HashMap<>();
         stats.put("avg", extendedStats.getAvg());
         stats.put("sum", extendedStats.getSum());
         stats.put("count", extendedStats.getCount());
@@ -114,7 +113,7 @@ public class StatsAction extends Action<StatsRequest> {
         statsValue.setStats(stats);
 
         InternalPercentiles internalPercentile = InternalPercentiles.class.cast(aggregations.getAsMap().get(percentileMetricKey));
-        Map<Number, Number> percentiles = new HashMap<Number, Number>();
+        Map<Number, Number> percentiles = new HashMap<>();
         for (Percentile percentile : internalPercentile) {
             percentiles.put(percentile.getPercent(), percentile.getValue());
         }

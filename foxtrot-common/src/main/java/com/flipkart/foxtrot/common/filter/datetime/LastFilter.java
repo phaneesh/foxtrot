@@ -1,9 +1,9 @@
-package com.flipkart.foxtrot.common.query.datetime;
+package com.flipkart.foxtrot.common.filter.datetime;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.flipkart.foxtrot.common.query.Filter;
-import com.flipkart.foxtrot.common.query.FilterOperator;
-import com.flipkart.foxtrot.common.query.FilterVisitor;
+import com.flipkart.foxtrot.common.filter.Filter;
+import com.flipkart.foxtrot.common.filter.FilterOperator;
+import com.flipkart.foxtrot.common.filter.FilterVisitor;
 import com.yammer.dropwizard.util.Duration;
 
 import javax.validation.constraints.NotNull;

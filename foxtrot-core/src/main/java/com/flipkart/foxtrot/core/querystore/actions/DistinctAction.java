@@ -3,10 +3,10 @@ package com.flipkart.foxtrot.core.querystore.actions;
 import com.flipkart.foxtrot.common.ActionResponse;
 import com.flipkart.foxtrot.common.distinct.DistinctRequest;
 import com.flipkart.foxtrot.common.distinct.DistinctResponse;
-import com.flipkart.foxtrot.common.query.Filter;
-import com.flipkart.foxtrot.common.query.FilterCombinerType;
+import com.flipkart.foxtrot.common.filter.Filter;
+import com.flipkart.foxtrot.common.filter.FilterCombiner;
 import com.flipkart.foxtrot.common.query.ResultSort;
-import com.flipkart.foxtrot.common.query.general.AnyFilter;
+import com.flipkart.foxtrot.common.filter.general.AnyFilter;
 import com.flipkart.foxtrot.core.common.Action;
 import com.flipkart.foxtrot.core.datastore.DataStore;
 import com.flipkart.foxtrot.core.querystore.QueryStore;
@@ -100,7 +100,7 @@ public class DistinctAction extends Action<DistinctRequest> {
                     rootBuilder = termsBuilder;
                 }
             }
-            query.setQuery(new ElasticSearchQueryGenerator(FilterCombinerType.and)
+            query.setQuery(new ElasticSearchQueryGenerator(FilterCombiner.and)
                     .genFilter(request.getFilters()))
                     .setSearchType(SearchType.COUNT)
                     .addAggregation(rootBuilder);

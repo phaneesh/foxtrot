@@ -1,12 +1,12 @@
 package com.flipkart.foxtrot.core.querystore.impl;
 
 import com.flipkart.foxtrot.common.ActionRequest;
-import com.flipkart.foxtrot.common.query.Filter;
-import com.flipkart.foxtrot.common.query.datetime.LastFilter;
-import com.flipkart.foxtrot.common.query.numeric.BetweenFilter;
-import com.flipkart.foxtrot.common.query.numeric.GreaterEqualFilter;
-import com.flipkart.foxtrot.common.query.numeric.GreaterThanFilter;
-import com.flipkart.foxtrot.common.query.numeric.LessThanFilter;
+import com.flipkart.foxtrot.common.filter.Filter;
+import com.flipkart.foxtrot.common.filter.datetime.LastFilter;
+import com.flipkart.foxtrot.common.filter.numeric.BetweenFilter;
+import com.flipkart.foxtrot.common.filter.numeric.GreaterEqualFilter;
+import com.flipkart.foxtrot.common.filter.numeric.GreaterThanFilter;
+import com.flipkart.foxtrot.common.filter.numeric.LessThanFilter;
 import com.flipkart.foxtrot.core.common.PeriodSelector;
 import com.yammer.dropwizard.util.Duration;
 import org.joda.time.DateTimeZone;

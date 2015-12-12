@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.flipkart.foxtrot.common.query;
+package com.flipkart.foxtrot.common.filter;
 
 /**
  * User: Santanu Sinha (santanu.sinha@flipkart.com)
  * Date: 18/03/14
  * Time: 1:21 AM
  */
-public enum FilterCombinerType {
+public enum FilterCombiner {
     and,
     or
 }

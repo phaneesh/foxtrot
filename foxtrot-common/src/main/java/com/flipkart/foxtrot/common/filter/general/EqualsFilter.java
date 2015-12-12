@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.flipkart.foxtrot.common.query.string;
+package com.flipkart.foxtrot.common.filter.general;
 
-import com.flipkart.foxtrot.common.query.Filter;
-import com.flipkart.foxtrot.common.query.FilterOperator;
-import com.flipkart.foxtrot.common.query.FilterVisitor;
+import com.flipkart.foxtrot.common.filter.Filter;
+import com.flipkart.foxtrot.common.filter.FilterOperator;
+import com.flipkart.foxtrot.common.filter.FilterVisitor;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import javax.validation.constraints.NotNull;
@@ -25,14 +25,19 @@ import javax.validation.constraints.NotNull;
 /**
  * User: Santanu Sinha (santanu.sinha@flipkart.com)
  * Date: 14/03/14
- * Time: 3:46 PM
+ * Time: 3:35 PM
  */
-public class ContainsFilter extends Filter {
+public class EqualsFilter extends Filter {
     @NotNull
-    private String value;
+    private Object value;
 
-    public ContainsFilter() {
-        super(FilterOperator.contains);
+    public EqualsFilter() {
+        super(FilterOperator.equals);
+    }
+
+    public EqualsFilter(String field, Object value) {
+        super(FilterOperator.equals, field);
+        this.value = value;
     }
 
     @Override
@@ -40,11 +45,11 @@ public class ContainsFilter extends Filter {
         visitor.visit(this);
     }
 
-    public String getValue() {
+    public Object getValue() {
         return value;
     }
 
-    public void setValue(String value) {
+    public void setValue(Object value) {
         this.value = value;
     }
 
@@ -54,7 +59,7 @@ public class ContainsFilter extends Filter {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
 
-        ContainsFilter that = (ContainsFilter) o;
+        EqualsFilter that = (EqualsFilter) o;
 
         return value.equals(that.value);
 

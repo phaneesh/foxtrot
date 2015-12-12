@@ -1,4 +1,4 @@
-package com.flipkart.foxtrot.common.query.datetime;
+package com.flipkart.foxtrot.common.filter.datetime;
 
 import com.yammer.dropwizard.util.Duration;
 

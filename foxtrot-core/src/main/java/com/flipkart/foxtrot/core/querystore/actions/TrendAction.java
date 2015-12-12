@@ -16,11 +16,11 @@
 package com.flipkart.foxtrot.core.querystore.actions;
 
 import com.flipkart.foxtrot.common.ActionResponse;
-import com.flipkart.foxtrot.common.query.Filter;
-import com.flipkart.foxtrot.common.query.FilterCombinerType;
-import com.flipkart.foxtrot.common.query.datetime.LastFilter;
-import com.flipkart.foxtrot.common.query.general.AnyFilter;
-import com.flipkart.foxtrot.common.query.general.InFilter;
+import com.flipkart.foxtrot.common.filter.Filter;
+import com.flipkart.foxtrot.common.filter.FilterCombiner;
+import com.flipkart.foxtrot.common.filter.datetime.LastFilter;
+import com.flipkart.foxtrot.common.filter.general.AnyFilter;
+import com.flipkart.foxtrot.common.filter.general.InFilter;
 import com.flipkart.foxtrot.common.trend.TrendRequest;
 import com.flipkart.foxtrot.common.trend.TrendResponse;
 import com.flipkart.foxtrot.core.common.Action;
@@ -116,7 +116,7 @@ public class TrendAction extends Action<TrendRequest> {
             SearchResponse searchResponse = getConnection().getClient()
                     .prepareSearch(ElasticsearchUtils.getIndices(parameter.getTable(), parameter))
                     .setIndicesOptions(Utils.indicesOptions())
-                    .setQuery(new ElasticSearchQueryGenerator(FilterCombinerType.and).genFilter(parameter.getFilters()))
+                    .setQuery(new ElasticSearchQueryGenerator(FilterCombiner.and).genFilter(parameter.getFilters()))
                     .setSearchType(SearchType.COUNT)
                     .addAggregation(aggregationBuilder)
                     .execute()

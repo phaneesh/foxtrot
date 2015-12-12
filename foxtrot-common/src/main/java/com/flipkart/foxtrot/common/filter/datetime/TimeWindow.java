@@ -1,4 +1,4 @@
-package com.flipkart.foxtrot.common.query.datetime;
+package com.flipkart.foxtrot.common.filter.datetime;
 
 import java.util.Date;
 

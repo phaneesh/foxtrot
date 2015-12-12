@@ -1,8 +1,8 @@
-package com.flipkart.foxtrot.common.query.general;
+package com.flipkart.foxtrot.common.filter.general;
 
-import com.flipkart.foxtrot.common.query.Filter;
-import com.flipkart.foxtrot.common.query.FilterOperator;
-import com.flipkart.foxtrot.common.query.FilterVisitor;
+import com.flipkart.foxtrot.common.filter.Filter;
+import com.flipkart.foxtrot.common.filter.FilterOperator;
+import com.flipkart.foxtrot.common.filter.FilterVisitor;
 
 /**
  * Created by rishabh.goyal on 03/11/14.

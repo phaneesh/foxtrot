@@ -3,10 +3,10 @@ package com.flipkart.foxtrot.core.querystore.actions;
 import com.flipkart.foxtrot.common.ActionResponse;
 import com.flipkart.foxtrot.common.count.CountRequest;
 import com.flipkart.foxtrot.common.count.CountResponse;
-import com.flipkart.foxtrot.common.query.Filter;
-import com.flipkart.foxtrot.common.query.FilterCombinerType;
-import com.flipkart.foxtrot.common.query.general.AnyFilter;
-import com.flipkart.foxtrot.common.query.general.ExistsFilter;
+import com.flipkart.foxtrot.common.filter.Filter;
+import com.flipkart.foxtrot.common.filter.FilterCombiner;
+import com.flipkart.foxtrot.common.filter.general.AnyFilter;
+import com.flipkart.foxtrot.common.filter.general.ExistsFilter;
 import com.flipkart.foxtrot.core.common.Action;
 import com.flipkart.foxtrot.core.datastore.DataStore;
 import com.flipkart.foxtrot.core.querystore.QueryStore;
@@ -80,7 +80,7 @@ public class CountAction extends Action<CountRequest> {
                         .prepareSearch(ElasticsearchUtils.getIndices(parameter.getTable(), parameter))
                         .setIndicesOptions(Utils.indicesOptions())
                         .setSearchType(SearchType.COUNT)
-                        .setQuery(new ElasticSearchQueryGenerator(FilterCombinerType.and)
+                        .setQuery(new ElasticSearchQueryGenerator(FilterCombiner.and)
                                 .genFilter(parameter.getFilters()))
                         .addAggregation(AggregationBuilders
                                 .cardinality(Utils.sanitizeFieldForAggregation(parameter.getField()))
@@ -97,7 +97,7 @@ public class CountAction extends Action<CountRequest> {
             } else {
                 CountRequestBuilder countRequestBuilder = getConnection().getClient()
                         .prepareCount(ElasticsearchUtils.getIndices(parameter.getTable(), parameter))
-                        .setQuery(new ElasticSearchQueryGenerator(FilterCombinerType.and).genFilter(parameter.getFilters()));
+                        .setQuery(new ElasticSearchQueryGenerator(FilterCombiner.and).genFilter(parameter.getFilters()));
                 org.elasticsearch.action.count.CountResponse countResponse = countRequestBuilder.execute().actionGet();
                 return new CountResponse(countResponse.getCount());
             }

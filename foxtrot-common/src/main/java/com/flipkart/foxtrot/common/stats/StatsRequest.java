@@ -1,7 +1,7 @@
 package com.flipkart.foxtrot.common.stats;
 
 import com.flipkart.foxtrot.common.ActionRequest;
-import com.flipkart.foxtrot.common.query.FilterCombinerType;
+import com.flipkart.foxtrot.common.filter.FilterCombiner;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.hibernate.validator.constraints.NotEmpty;
 
@@ -21,7 +21,7 @@ public class StatsRequest extends ActionRequest {
     private String field;
 
     @NotNull
-    private FilterCombinerType combiner = FilterCombinerType.and;
+    private FilterCombiner combiner = FilterCombiner.and;
 
     public StatsRequest() {
 
@@ -43,11 +43,11 @@ public class StatsRequest extends ActionRequest {
         this.field = field;
     }
 
-    public FilterCombinerType getCombiner() {
+    public FilterCombiner getCombiner() {
         return combiner;
     }
 
-    public void setCombiner(FilterCombinerType combiner) {
+    public void setCombiner(FilterCombiner combiner) {
         this.combiner = combiner;
     }
 

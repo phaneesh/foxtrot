@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.flipkart.foxtrot.common.query.Query;
-import com.flipkart.foxtrot.common.query.general.MissingFilter;
+import com.flipkart.foxtrot.common.filter.general.MissingFilter;
 import com.flipkart.foxtrot.sql.query.FqlActionQuery;
 import com.google.common.collect.ImmutableList;
 import org.junit.Assert;
